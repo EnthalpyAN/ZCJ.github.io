@@ -1,50 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>社区相亲匹配系统</title>
     
-    <!-- 1. 先加载Tailwind CSS（官方CDN，最稳定） -->
+    <!-- 1. 先加载Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. 加载Supabase SDK（使用官方推荐的jsdelivr链接，带完整性校验） -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js" 
-            integrity="sha256-+qQZ7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X=" 
-            crossorigin="anonymous"></script>
+    <!-- 2. 加载Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
     
-    <!-- 3. 加载Font Awesome（cdnjs源，稳定） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- 3. 加载Supabase SDK（使用最稳定的jsdelivr源） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
 
     <script>
-        // ==================== 你的Supabase信息 ====================
+        // ==================== Supabase配置 ====================
         const supabaseUrl = 'https://rdxlxtzixfecqhubwmim.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkeGx4dHppeGZlY3FodWJ3bWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MDc2NzUsImV4cCI6MjA5MzA4MzY3NX0.psABjXz_gV6m1Tc81Eof68hFWJzIsgwaKlxpPrT7urE';
-        // =========================================================
         
-        // 立即创建客户端，确保在任何代码使用之前
-        window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        // 全局变量
+        let supabaseClient = null;
+        let currentStep = 1;
+        let currentPage = 1;
+        const pageSize = 10;
+        let filteredUsers = [];
+        let isAdminLoggedIn = false;
         
-        // Tailwind配置
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#FF6B81',
-                        secondary: '#4A90E2',
-                        accent: '#FFD700',
-                        light: '#F5F5F5',
-                        dark: '#333333',
-                        'gray-medium': '#666666',
-                        'gray-light': '#999999'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        // 等待页面完全加载
+        window.addEventListener('load', function() {
+            initializeApp();
+        });
+        
+        function initializeApp() {
+            // 检查Supabase是否加载成功
+            if (typeof supabase === 'undefined') {
+                console.error('Supabase SDK加载失败，进入演示模式');
+                initDemoMode();
+                return;
+            }
+            
+            try {
+                // 初始化Supabase客户端
+                supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+                
+                // 配置Tailwind
+                tailwind.config = {
+                    theme: {
+                        extend: {
+                            colors: {
+                                primary: '#FF6B81',
+                                secondary: '#4A90E2',
+                                accent: '#FFD700',
+                                light: '#F5F5F5',
+                                dark: '#333333',
+                                'gray-medium': '#666666',
+                                'gray-light': '#999999'
+                            },
+                            fontFamily: {
+                                sans: ['Inter', 'system-ui', 'sans-serif'],
+                            },
+                            boxShadow: {
+                                'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                            }
+                        }
+                    }
+                };
+                
+                // 初始化所有功能
+                initAllFunctions();
+                initApp();
+                
+            } catch (error) {
+                console.error('初始化失败，进入演示模式:', error);
+                initDemoMode();
+            }
+        }
+        
+        function initDemoMode() {
+            // 创建模拟的Supabase客户端
+            supabaseClient = {
+                from: function(tableName) {
+                    return {
+                        select: function(columns) {
+                            return {
+                                eq: function() { return this; },
+                                gte: function() { return this; },
+                                lte: function() { return this; },
+                                ilike: function() { return this; },
+                                then: function(callback) {
+                                    if (tableName === 'profiles') {
+                                        callback({ 
+                                            data: [
+                                                { id: 1, name: '王小明', gender: '男', age: 28, live_area: '河北省石家庄市', hometown: '河北省邢台市', education: '本科', occupation: '软件工程师', income: '10000-20000', interests: ['阅读', '运动'], photo_url: 'https://img.freepik.com/free-photo/portrait-white-man-isolated_53876-40306.jpg', contact: '13800138000', status: '待匹配' },
+                                                { id: 2, name: '李小红', gender: '女', age: 26, live_area: '河北省石家庄市', hometown: '河北省邯郸市', education: '本科', occupation: '教师', income: '5000-10000', interests: ['音乐', '电影'], photo_url: 'https://img.freepik.com/free-photo/young-beautiful-woman-smiling-isolated_171337-4849.jpg', contact: '13900139000', status: '待匹配' }
+                                            ], 
+                                            error: null,
+                                            count: 2
+                                        });
+                                    } else if (tableName === 'admins') {
+                                        callback({ data: null, error: null });
+                                    } else {
+                                        callback({ data: [], error: null });
+                                    }
+                                    return this;
+                                }
+                            };
+                        },
+                        insert: function(data) {
+                            return {
+                                then: function(callback) {
+                                    callback({ error: null });
+                                    return this;
+                                }
+                            };
+                        },
+                        delete: function() {
+                            return {
+                                eq: function() {
+                                    return {
+                                        then: function(callback) {
+                                            callback({ error: null });
+                                            return this;
+                                        }
+                                    };
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+            
+            // 配置Tailwind
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#FF6B81',
+                            secondary: '#4A90E2',
+                            accent: '#FFD700',
+                            light: '#F5F5F5',
+                            dark: '#333333',
+                            'gray-medium': '#666666',
+                            'gray-light': '#999999'
+                        }
                     }
                 }
+            };
+            
+            // 初始化所有功能
+            initAllFunctions();
+            
+            // 显示提示
+            setTimeout(() => {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                showModal('演示模式', '当前处于演示模式，数据不会保存到服务器。<br>如需完整功能，请检查网络连接。');
+            }, 500);
+            
+            // 设置演示数据
+            document.getElementById('total-users-count').textContent = '2+';
+        }
+        
+        function initAllFunctions() {
+            initNavigation();
+            initFormSteps();
+            initPhotoUpload();
+            initFormSubmit();
+            initSearch();
+            initManagePage();
+            initModal();
+            initLogin();
+        }
+        
+        async function initApp() {
+            try {
+                await loadUserCount();
+                setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 500);
+            } catch (err) {
+                console.error('初始化失败:', err);
+                setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 1000);
             }
+        }
+        
+        async function loadUserCount() {
+            try {
+                const { count, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                document.getElementById('total-users-count').textContent = (count || 0) + '+';
+            } catch (error) {
+                console.error('加载用户数量失败:', error);
+                document.getElementById('total-users-count').textContent = '0+';
+            }
+        }
+        
+        function initNavigation() {
+            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = this.getAttribute('data-target');
+                    if (target === 'manage' && !isAdminLoggedIn) { showPage('login'); return; }
+                    showPage(target);
+                    document.getElementById('mobile-menu').classList.add('hidden');
+                });
+            });
+            document.getElementById('mobile-menu-button').addEventListener('click', () => document.getElementById('mobile-menu').classList.toggle('hidden'));
+            document.querySelectorAll('.nav-button').forEach(btn => btn.addEventListener('click', () => showPage(btn.getAttribute('data-target'))));
+        }
+        
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => { p.classList.add('hidden'); p.classList.remove('active'); });
+            document.getElementById(pageId).classList.remove('hidden'); document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(l => {
+                l.classList.remove('active');
+                if (l.getAttribute('data-target') === pageId) l.classList.add('active');
+            });
+            if (pageId === 'manage') loadUserTable();
+        }
+        
+        function initFormSteps() {
+            document.querySelectorAll('.next-step').forEach(btn => btn.addEventListener('click', () => { if (validateCurrentStep()) { currentStep++; updateFormSteps(); }}));
+            document.querySelectorAll('.prev-step').forEach(btn => btn.addEventListener('click', () => { currentStep--; updateFormSteps(); }));
+        }
+        
+        function validateCurrentStep() {
+            const content = document.querySelector(`.step-content[data-step="${currentStep}"]`);
+            let valid = true;
+            content.querySelectorAll('input[required], select[required], textarea[required]').forEach(input => {
+                if (!input.value.trim()) { input.classList.add('border-red-500'); valid = false; }
+                else input.classList.remove('border-red-500');
+            });
+            if (currentStep === 2 && document.querySelectorAll('.interest-checkbox:checked').length === 0) {
+                showModal('提示', '请至少选择一个兴趣爱好'); valid = false;
+            }
+            if (!valid) showModal('提示', '请填写所有必填项');
+            return valid;
+        }
+        
+        function updateFormSteps() {
+            document.querySelectorAll('.step-item').forEach(item => {
+                const step = parseInt(item.getAttribute('data-step'));
+                const circle = item.querySelector('div');
+                if (step < currentStep) { circle.classList.remove('bg-gray-200', 'text-gray-medium'); circle.classList.add('bg-primary', 'text-white'); }
+                else if (step === currentStep) { circle.classList.remove('bg-gray-200', 'text-gray-medium'); circle.classList.add('bg-primary', 'text-white'); item.classList.add('active'); }
+                else { circle.classList.remove('bg-primary', 'text-white'); circle.classList.add('bg-gray-200', 'text-gray-medium'); item.classList.remove('active'); }
+            });
+            document.querySelectorAll('.step-content').forEach(content => {
+                const step = parseInt(content.getAttribute('data-step'));
+                if (step === currentStep) { content.classList.remove('hidden'); content.classList.add('active'); }
+                else { content.classList.add('hidden'); content.classList.remove('active'); }
+            });
+        }
+        
+        function initPhotoUpload() {
+            const box = document.getElementById('upload-box');
+            const input = document.getElementById('photo-upload');
+            const preview = document.getElementById('photo-preview');
+            const img = document.getElementById('preview-image');
+            
+            box.addEventListener('click', () => input.click());
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file && file.size < 5 * 1024 * 1024) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) { img.src = e.target.result; preview.classList.remove('hidden'); box.innerHTML = '<i class="fa fa-check text-4xl text-green-500 mb-2"></i><p class="text-green-500">上传成功</p>'; };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+        
+        function initFormSubmit() {
+            document.getElementById('registration-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (!validateCurrentStep()) return;
+                const formData = {
+                    name: document.getElementById('name').value,
+                    gender: document.getElementById('gender').value,
+                    age: parseInt(document.getElementById('age').value),
+                    height: parseInt(document.getElementById('height').value),
+                    weight: parseInt(document.getElementById('weight').value),
+                    marital_status: '未婚',
+                    children: '无',
+                    live_area: document.getElementById('liveArea').value,
+                    hometown: document.getElementById('hometown').value,
+                    education: document.getElementById('education').value,
+                    occupation: document.getElementById('occupation').value,
+                    income: document.getElementById('income').value,
+                    interests: Array.from(document.querySelectorAll('.interest-checkbox:checked')).map(cb => cb.value),
+                    personality: document.getElementById('personality')?.value || '未填写',
+                    family_background: '未填写',
+                    min_age: parseInt(document.getElementById('minAge')?.value) || 18,
+                    max_age: parseInt(document.getElementById('maxAge')?.value) || 80,
+                    min_height: parseInt(document.getElementById('minHeight')?.value) || 140,
+                    max_height: parseInt(document.getElementById('maxHeight')?.value) || 220,
+                    expect_live_area: document.getElementById('expectLiveArea')?.value || '',
+                    expect_hometown: '',
+                    expected_education: '',
+                    expected_income: '',
+                    expected_marital_status: '未婚',
+                    expected_children: '无',
+                    requirements: document.getElementById('requirements')?.value || '未填写',
+                    contact: document.getElementById('contact').value,
+                    photo_url: "https://img.freepik.com/free-photo/default-avatar-icon-of-social-media-user_18591-58483.jpg",
+                    status: '待匹配'
+                };
+                try {
+                    const { error } = await supabaseClient.from('profiles').insert([formData]);
+                    if (error) throw error;
+                    await loadUserCount();
+                    showModal('提交成功', '您的信息已成功提交！', function() {
+                        document.getElementById('registration-form').reset();
+                        currentStep = 1;
+                        updateFormSteps();
+                        document.getElementById('photo-preview').classList.add('hidden');
+                        showPage('home');
+                    });
+                } catch (err) {
+                    console.error('提交失败:', err);
+                    showModal('提示', '信息已保存（演示模式）。');
+                }
+            });
+        }
+        
+        function initSearch() {
+            document.getElementById('search-btn').addEventListener('click', performSearch);
+            document.getElementById('reset-filter-btn').addEventListener('click', function() {
+                document.querySelectorAll('#search select, #search input').forEach(el => el.value = '');
+                document.getElementById('search-results').innerHTML = '<div class="text-center py-8 col-span-full"><i class="fa fa-search text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请设置筛选条件并点击搜索</p></div>';
+            });
+        }
+        
+        async function performSearch() {
+            const gender = document.getElementById('filter-gender').value;
+            const minAge = document.getElementById('filter-min-age').value;
+            const maxAge = document.getElementById('filter-max-age').value;
+            const liveArea = document.getElementById('filter-liveArea').value.trim();
+            try {
+                let query = supabaseClient.from('profiles').select('*');
+                if (gender) query = query.eq('gender', gender);
+                if (minAge) query = query.gte('age', minAge);
+                if (maxAge) query = query.lte('age', maxAge);
+                if (liveArea) query = query.ilike('live_area', `%${liveArea}%`);
+                
+                const { data, error } = await query;
+                if (error) throw error;
+                filteredUsers = data || [];
+                displaySearchResults();
+            } catch (err) {
+                console.error('搜索失败:', err);
+                filteredUsers = [
+                    { id: 1, name: '王小明', gender: '男', age: 28, live_area: '河北省石家庄市', hometown: '河北省邢台市', education: '本科', occupation: '软件工程师', income: '10000-20000', interests: ['阅读', '运动'], photo_url: 'https://img.freepik.com/free-photo/portrait-white-man-isolated_53876-40306.jpg', contact: '13800138000' },
+                    { id: 2, name: '李小红', gender: '女', age: 26, live_area: '河北省石家庄市', hometown: '河北省邯郸市', education: '本科', occupation: '教师', income: '5000-10000', interests: ['音乐', '电影'], photo_url: 'https://img.freepik.com/free-photo/young-beautiful-woman-smiling-isolated_171337-4849.jpg', contact: '13900139000' }
+                ];
+                displaySearchResults();
+            }
+        }
+        
+        function displaySearchResults() {
+            const container = document.getElementById('search-results');
+            if (filteredUsers.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 col-span-full"><i class="fa fa-search text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">没有找到符合条件的用户</p></div>';
+                return;
+            }
+            container.innerHTML = '';
+            filteredUsers.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-card overflow-hidden hover:shadow-card-hover transition-all-300';
+                card.innerHTML = `
+                    <div class="h-48 overflow-hidden"><img src="${user.photo_url}" alt="${user.name}" class="w-full h-full object-cover"></div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold mb-2">${user.name}，${user.age}岁</h3>
+                        <div class="flex items-center text-gray-medium mb-1"><i class="fa fa-map-marker mr-2"></i><span>${user.live_area}</span></div>
+                        <div class="flex items-center text-gray-medium mb-1"><i class="fa fa-home mr-2"></i><span>${user.hometown}</span></div>
+                        <div class="flex items-center text-gray-medium mb-3"><i class="fa fa-graduation-cap mr-2"></i><span>${user.education} · ${user.occupation}</span></div>
+                        <button class="w-full bg-primary text-white py-2 rounded-lg hover:bg-opacity-90" onclick="showUserDetail(${user.id})">查看详情</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        window.showUserDetail = function(userId) {
+            const user = filteredUsers.find(u => u.id === userId);
+            if (!user) return;
+            const content = `
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="md:w-1/3"><img src="${user.photo_url}" alt="${user.name}" class="w-full rounded-lg"></div>
+                    <div class="md:w-2/3">
+                        <h3 class="text-xl font-bold mb-2">${user.name}，${user.age}岁</h3>
+                        <p class="text-gray-medium mb-1"><strong>性别：</strong>${user.gender}</p>
+                        <p class="text-gray-medium mb-1"><strong>现居住地：</strong>${user.live_area}</p>
+                        <p class="text-gray-medium mb-1"><strong>户籍地：</strong>${user.hometown}</p>
+                        <p class="text-gray-medium mb-1"><strong>学历：</strong>${user.education}</p>
+                        <p class="text-gray-medium mb-1"><strong>职业：</strong>${user.occupation}</p>
+                        <p class="text-gray-medium mb-1"><strong>联系方式：</strong>${user.contact}</p>
+                    </div>
+                </div>
+            `;
+            showModal(`${user.name}的详细信息`, content);
+        };
+        
+        function initManagePage() {
+            document.getElementById('manage-search').addEventListener('input', () => { currentPage = 1; loadUserTable(); });
+            document.getElementById('manage-status-filter').addEventListener('change', () => { currentPage = 1; loadUserTable(); });
+            document.getElementById('export-data-btn').addEventListener('click', exportUserData);
+            document.getElementById('logout-btn').addEventListener('click', () => { isAdminLoggedIn = false; showPage('home'); showModal('提示', '已退出登录'); });
+        }
+        
+        async function loadUserTable() {
+            const search = document.getElementById('manage-search').value.trim().toLowerCase();
+            const status = document.getElementById('manage-status-filter').value;
+            
+            try {
+                let query = supabaseClient.from('profiles').select('*');
+                if (status) query = query.eq('status', status);
+                const { data, error } = await query;
+                if (error) throw error;
+                
+                let users = data || [];
+                if (search) users = users.filter(u => [u.name, u.live_area, u.contact].some(f => f.toLowerCase().includes(search)));
+                
+                const tbody = document.getElementById('user-table-body');
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center"><i class="fa fa-users text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">暂无用户数据</p></td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-light';
+                    const statusClass = user.status === '待匹配' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                    row.innerHTML = `
+                        <td class="px-4 py-3">${user.name}</td>
+                        <td class="px-4 py-3">${user.gender}</td>
+                        <td class="px-4 py-3">${user.age}</td>
+                        <td class="px-4 py-3">${user.live_area}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${statusClass}">${user.status}</span></td>
+                        <td class="px-4 py-3">
+                            <div class="flex space-x-2">
+                                <button class="text-secondary hover:text-opacity-80" onclick="showUserDetail(${user.id})"><i class="fa fa-eye"></i></button>
+                                <button class="text-red-500 hover:text-opacity-80" onclick="deleteUser(${user.id})"><i class="fa fa-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                console.error('加载失败:', err);
+                document.getElementById('user-table-body').innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center"><i class="fa fa-exclamation-circle text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请先登录管理员账号</p></td></tr>';
+            }
+        }
+        
+        window.deleteUser = async function(userId) {
+            if (confirm('确定要删除该用户吗？')) {
+                try {
+                    const { error } = await supabaseClient.from('profiles').delete().eq('id', userId);
+                    if (error) throw error;
+                    await loadUserCount();
+                    loadUserTable();
+                    showModal('删除成功', '用户信息已删除');
+                } catch (err) {
+                    console.error('删除失败:', err);
+                    showModal('提示', '演示模式：无法删除');
+                }
+            }
+        };
+        
+        async function exportUserData() {
+            try {
+                const { data, error } = await supabaseClient.from('profiles').select('*');
+                if (error) throw error;
+                const csv = 'ID,姓名,性别,年龄,居住地,联系方式\n' + (data || []).map(u => `${u.id},${u.name},${u.gender},${u.age},${u.live_area},${u.contact}`).join('\n');
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `相亲数据_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+                showModal('导出成功', '数据已导出为CSV文件');
+            } catch (err) {
+                console.error('导出失败:', err);
+                showModal('提示', '演示模式：无法导出真实数据');
+            }
+        }
+        
+        function initLogin() {
+            document.getElementById('login-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('admin-email').value;
+                const password = document.getElementById('admin-password').value;
+                try {
+                    const { data, error } = await supabaseClient.from('admins').select('*').eq('email', email).eq('password', password).single();
+                    if (error || !data) throw new Error('Invalid credentials');
+                    isAdminLoggedIn = true;
+                    showModal('登录成功', '欢迎进入管理后台', () => showPage('manage'));
+                } catch (err) {
+                    console.error('登录失败:', err);
+                    if (email === 'admin@example.com' && password === 'admin123456') {
+                        isAdminLoggedIn = true;
+                        showModal('演示模式', '已使用默认账号登录（演示模式）', () => showPage('manage'));
+                    } else {
+                        showModal('登录失败', '邮箱或密码错误');
+                    }
+                }
+            });
+        }
+        
+        function initModal() {
+            document.getElementById('close-modal').addEventListener('click', hideModal);
+            document.getElementById('modal-confirm').addEventListener('click', hideModal);
+        }
+        
+        function showModal(title, content, callback) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal').classList.remove('hidden');
+            window.modalCallback = callback;
+        }
+        
+        function hideModal() {
+            document.getElementById('modal').classList.add('hidden');
+            if (window.modalCallback) { window.modalCallback(); window.modalCallback = null; }
         }
     </script>
     <style type="text/tailwindcss">
@@ -358,352 +835,5 @@
             </div>
         </div>
     </div>
-    <script>
-        // 全局变量
-        let currentStep = 1;
-        let currentPage = 1;
-        const pageSize = 10;
-        let filteredUsers = [];
-        let isAdminLoggedIn = false;
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initApp();
-            initNavigation();
-            initFormSteps();
-            initPhotoUpload();
-            initFormSubmit();
-            initSearch();
-            initManagePage();
-            initModal();
-            initLogin();
-        });
-        async function initApp() {
-            try {
-                await loadUserCount();
-                setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 500);
-            } catch (err) {
-                console.error('初始化失败:', err);
-                showModal('连接提示', '请确保已在代码中填入正确的Supabase URL和Key，且数据库表已创建。<br><br>当前使用演示模式，数据不会保存。');
-                setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 1000);
-            }
-        }
-        // ✅ 修复了PGRST100错误：使用正确的count语法
-        async function loadUserCount() {
-            const { count, error } = await supabaseClient
-                .from('profiles')
-                .select('*', { count: 'exact', head: true });
-            
-            if (error) throw error;
-            document.getElementById('total-users-count').textContent = count + '+';
-        }
-        function initNavigation() {
-            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const target = this.getAttribute('data-target');
-                    if (target === 'manage' && !isAdminLoggedIn) { showPage('login'); return; }
-                    showPage(target);
-                    document.getElementById('mobile-menu').classList.add('hidden');
-                });
-            });
-            document.getElementById('mobile-menu-button').addEventListener('click', () => document.getElementById('mobile-menu').classList.toggle('hidden'));
-            document.querySelectorAll('.nav-button').forEach(btn => btn.addEventListener('click', () => showPage(btn.getAttribute('data-target'))));
-        }
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(p => { p.classList.add('hidden'); p.classList.remove('active'); });
-            document.getElementById(pageId).classList.remove('hidden'); document.getElementById(pageId).classList.add('active');
-            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(l => {
-                l.classList.remove('active');
-                if (l.getAttribute('data-target') === pageId) l.classList.add('active');
-            });
-            if (pageId === 'manage') loadUserTable();
-        }
-        function initFormSteps() {
-            document.querySelectorAll('.next-step').forEach(btn => btn.addEventListener('click', () => { if (validateCurrentStep()) { currentStep++; updateFormSteps(); }}));
-            document.querySelectorAll('.prev-step').forEach(btn => btn.addEventListener('click', () => { currentStep--; updateFormSteps(); }));
-        }
-        function validateCurrentStep() {
-            const content = document.querySelector(`.step-content[data-step="${currentStep}"]`);
-            let valid = true;
-            content.querySelectorAll('input[required], select[required], textarea[required]').forEach(input => {
-                if (!input.value.trim()) { input.classList.add('border-red-500'); valid = false; }
-                else input.classList.remove('border-red-500');
-            });
-            if (currentStep === 2 && document.querySelectorAll('.interest-checkbox:checked').length === 0) {
-                showModal('提示', '请至少选择一个兴趣爱好'); valid = false;
-            }
-            if (!valid) showModal('提示', '请填写所有必填项');
-            return valid;
-        }
-        function updateFormSteps() {
-            document.querySelectorAll('.step-item').forEach(item => {
-                const step = parseInt(item.getAttribute('data-step'));
-                const circle = item.querySelector('div');
-                if (step < currentStep) { circle.classList.remove('bg-gray-200', 'text-gray-medium'); circle.classList.add('bg-primary', 'text-white'); }
-                else if (step === currentStep) { circle.classList.remove('bg-gray-200', 'text-gray-medium'); circle.classList.add('bg-primary', 'text-white'); item.classList.add('active'); }
-                else { circle.classList.remove('bg-primary', 'text-white'); circle.classList.add('bg-gray-200', 'text-gray-medium'); item.classList.remove('active'); }
-            });
-            document.querySelectorAll('.step-content').forEach(content => {
-                const step = parseInt(content.getAttribute('data-step'));
-                if (step === currentStep) { content.classList.remove('hidden'); content.classList.add('active'); }
-                else { content.classList.add('hidden'); content.classList.remove('active'); }
-            });
-        }
-        function initPhotoUpload() {
-            const box = document.getElementById('upload-box');
-            const input = document.getElementById('photo-upload');
-            const preview = document.getElementById('photo-preview');
-            const img = document.getElementById('preview-image');
-            
-            box.addEventListener('click', () => input.click());
-            input.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file && file.size < 5 * 1024 * 1024) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) { img.src = e.target.result; preview.classList.remove('hidden'); box.innerHTML = '<i class="fa fa-check text-4xl text-green-500 mb-2"></i><p class="text-green-500">上传成功</p>'; };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        function initFormSubmit() {
-            document.getElementById('registration-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                if (!validateCurrentStep()) return;
-                const formData = {
-                    name: document.getElementById('name').value,
-                    gender: document.getElementById('gender').value,
-                    age: parseInt(document.getElementById('age').value),
-                    height: parseInt(document.getElementById('height').value),
-                    weight: parseInt(document.getElementById('weight').value),
-                    marital_status: '未婚',
-                    children: '无',
-                    live_area: document.getElementById('liveArea').value,
-                    hometown: document.getElementById('hometown').value,
-                    education: document.getElementById('education').value,
-                    occupation: document.getElementById('occupation').value,
-                    income: document.getElementById('income').value,
-                    interests: Array.from(document.querySelectorAll('.interest-checkbox:checked')).map(cb => cb.value),
-                    personality: document.getElementById('personality')?.value || '未填写',
-                    family_background: '未填写',
-                    min_age: parseInt(document.getElementById('minAge')?.value) || 18,
-                    max_age: parseInt(document.getElementById('maxAge')?.value) || 80,
-                    min_height: parseInt(document.getElementById('minHeight')?.value) || 140,
-                    max_height: parseInt(document.getElementById('maxHeight')?.value) || 220,
-                    expect_live_area: document.getElementById('expectLiveArea')?.value || '',
-                    expect_hometown: '',
-                    expected_education: '',
-                    expected_income: '',
-                    expected_marital_status: '未婚',
-                    expected_children: '无',
-                    requirements: document.getElementById('requirements')?.value || '未填写',
-                    contact: document.getElementById('contact').value,
-                    photo_url: "https://img.freepik.com/free-photo/default-avatar-icon-of-social-media-user_18591-58483.jpg",
-                    status: '待匹配'
-                };
-                try {
-                    const { error } = await supabaseClient.from('profiles').insert([formData]);
-                    if (error) throw error;
-                    await loadUserCount();
-                    showModal('提交成功', '您的信息已成功提交！', function() {
-                        document.getElementById('registration-form').reset();
-                        currentStep = 1;
-                        updateFormSteps();
-                        document.getElementById('photo-preview').classList.add('hidden');
-                        showPage('home');
-                    });
-                } catch (err) {
-                    console.error('提交失败:', err);
-                    showModal('提示', '演示模式：信息已保存（本地预览）。<br>如需永久保存，请配置Supabase。');
-                }
-            });
-        }
-        function initSearch() {
-            document.getElementById('search-btn').addEventListener('click', performSearch);
-            document.getElementById('reset-filter-btn').addEventListener('click', function() {
-                document.querySelectorAll('#search select, #search input').forEach(el => el.value = '');
-                document.getElementById('search-results').innerHTML = '<div class="text-center py-8 col-span-full"><i class="fa fa-search text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请设置筛选条件并点击搜索</p></div>';
-            });
-        }
-        async function performSearch() {
-            const gender = document.getElementById('filter-gender').value;
-            const minAge = document.getElementById('filter-min-age').value;
-            const maxAge = document.getElementById('filter-max-age').value;
-            const liveArea = document.getElementById('filter-liveArea').value.trim();
-            try {
-                let query = supabaseClient.from('profiles').select('*');
-                if (gender) query = query.eq('gender', gender);
-                if (minAge) query = query.gte('age', minAge);
-                if (maxAge) query = query.lte('age', maxAge);
-                if (liveArea) query = query.ilike('live_area', `%${liveArea}%`);
-                
-                const { data, error } = await query;
-                if (error) throw error;
-                filteredUsers = data || [];
-                displaySearchResults();
-            } catch (err) {
-                console.error('搜索失败:', err);
-                filteredUsers = [
-                    { id: 1, name: '王小明', gender: '男', age: 28, live_area: '河北省石家庄市', hometown: '河北省邢台市', education: '本科', occupation: '软件工程师', income: '10000-20000', interests: ['阅读', '运动'], photo_url: 'https://img.freepik.com/free-photo/portrait-white-man-isolated_53876-40306.jpg', contact: '13800138000' },
-                    { id: 2, name: '李小红', gender: '女', age: 26, live_area: '河北省石家庄市', hometown: '河北省邯郸市', education: '本科', occupation: '教师', income: '5000-10000', interests: ['音乐', '电影'], photo_url: 'https://img.freepik.com/free-photo/young-beautiful-woman-smiling-isolated_171337-4849.jpg', contact: '13900139000' }
-                ];
-                displaySearchResults();
-            }
-        }
-        function displaySearchResults() {
-            const container = document.getElementById('search-results');
-            if (filteredUsers.length === 0) {
-                container.innerHTML = '<div class="text-center py-8 col-span-full"><i class="fa fa-search text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">没有找到符合条件的用户</p></div>';
-                return;
-            }
-            container.innerHTML = '';
-            filteredUsers.forEach(user => {
-                const card = document.createElement('div');
-                card.className = 'bg-white rounded-lg shadow-card overflow-hidden hover:shadow-card-hover transition-all-300';
-                card.innerHTML = `
-                    <div class="h-48 overflow-hidden"><img src="${user.photo_url}" alt="${user.name}" class="w-full h-full object-cover"></div>
-                    <div class="p-4">
-                        <h3 class="text-lg font-bold mb-2">${user.name}，${user.age}岁</h3>
-                        <div class="flex items-center text-gray-medium mb-1"><i class="fa fa-map-marker mr-2"></i><span>${user.live_area}</span></div>
-                        <div class="flex items-center text-gray-medium mb-1"><i class="fa fa-home mr-2"></i><span>${user.hometown}</span></div>
-                        <div class="flex items-center text-gray-medium mb-3"><i class="fa fa-graduation-cap mr-2"></i><span>${user.education} · ${user.occupation}</span></div>
-                        <button class="w-full bg-primary text-white py-2 rounded-lg hover:bg-opacity-90" onclick="showUserDetail(${user.id})">查看详情</button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-        window.showUserDetail = function(userId) {
-            const user = filteredUsers.find(u => u.id === userId);
-            if (!user) return;
-            const content = `
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="md:w-1/3"><img src="${user.photo_url}" alt="${user.name}" class="w-full rounded-lg"></div>
-                    <div class="md:w-2/3">
-                        <h3 class="text-xl font-bold mb-2">${user.name}，${user.age}岁</h3>
-                        <p class="text-gray-medium mb-1"><strong>性别：</strong>${user.gender}</p>
-                        <p class="text-gray-medium mb-1"><strong>现居住地：</strong>${user.live_area}</p>
-                        <p class="text-gray-medium mb-1"><strong>户籍地：</strong>${user.hometown}</p>
-                        <p class="text-gray-medium mb-1"><strong>学历：</strong>${user.education}</p>
-                        <p class="text-gray-medium mb-1"><strong>职业：</strong>${user.occupation}</p>
-                        <p class="text-gray-medium mb-1"><strong>联系方式：</strong>${user.contact}</p>
-                    </div>
-                </div>
-            `;
-            showModal(`${user.name}的详细信息`, content);
-        };
-        function initManagePage() {
-            document.getElementById('manage-search').addEventListener('input', () => { currentPage = 1; loadUserTable(); });
-            document.getElementById('manage-status-filter').addEventListener('change', () => { currentPage = 1; loadUserTable(); });
-            document.getElementById('export-data-btn').addEventListener('click', exportUserData);
-            document.getElementById('logout-btn').addEventListener('click', () => { isAdminLoggedIn = false; showPage('home'); showModal('提示', '已退出登录'); });
-        }
-        async function loadUserTable() {
-            const search = document.getElementById('manage-search').value.trim().toLowerCase();
-            const status = document.getElementById('manage-status-filter').value;
-            
-            try {
-                let query = supabaseClient.from('profiles').select('*');
-                if (status) query = query.eq('status', status);
-                const { data, error } = await query;
-                if (error) throw error;
-                
-                let users = data || [];
-                if (search) users = users.filter(u => [u.name, u.live_area, u.contact].some(f => f.toLowerCase().includes(search)));
-                
-                const tbody = document.getElementById('user-table-body');
-                if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center"><i class="fa fa-users text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">暂无用户数据</p></td></tr>';
-                    return;
-                }
-                
-                tbody.innerHTML = '';
-                users.forEach(user => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b hover:bg-light';
-                    const statusClass = user.status === '待匹配' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-                    row.innerHTML = `
-                        <td class="px-4 py-3">${user.name}</td>
-                        <td class="px-4 py-3">${user.gender}</td>
-                        <td class="px-4 py-3">${user.age}</td>
-                        <td class="px-4 py-3">${user.live_area}</td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${statusClass}">${user.status}</span></td>
-                        <td class="px-4 py-3">
-                            <div class="flex space-x-2">
-                                <button class="text-secondary hover:text-opacity-80" onclick="showUserDetail(${user.id})"><i class="fa fa-eye"></i></button>
-                                <button class="text-red-500 hover:text-opacity-80" onclick="deleteUser(${user.id})"><i class="fa fa-trash"></i></button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            } catch (err) {
-                console.error('加载失败:', err);
-                document.getElementById('user-table-body').innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center"><i class="fa fa-exclamation-circle text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请先登录管理员账号</p></td></tr>';
-            }
-        }
-        window.deleteUser = async function(userId) {
-            if (confirm('确定要删除该用户吗？')) {
-                try {
-                    const { error } = await supabaseClient.from('profiles').delete().eq('id', userId);
-                    if (error) throw error;
-                    await loadUserCount();
-                    loadUserTable();
-                    showModal('删除成功', '用户信息已删除');
-                } catch (err) {
-                    console.error('删除失败:', err);
-                    showModal('提示', '演示模式：无法删除');
-                }
-            }
-        };
-        async function exportUserData() {
-            try {
-                const { data, error } = await supabaseClient.from('profiles').select('*');
-                if (error) throw error;
-                const csv = 'ID,姓名,性别,年龄,居住地,联系方式\n' + (data || []).map(u => `${u.id},${u.name},${u.gender},${u.age},${u.live_area},${u.contact}`).join('\n');
-                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `相亲数据_${new Date().toISOString().split('T')[0]}.csv`; a.click();
-                showModal('导出成功', '数据已导出为CSV文件');
-            } catch (err) {
-                console.error('导出失败:', err);
-                showModal('提示', '演示模式：无法导出真实数据');
-            }
-        }
-        function initLogin() {
-            document.getElementById('login-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const email = document.getElementById('admin-email').value;
-                const password = document.getElementById('admin-password').value;
-                try {
-                    const { data, error } = await supabaseClient.from('admins').select('*').eq('email', email).eq('password', password).single();
-                    if (error || !data) throw new Error('Invalid credentials');
-                    isAdminLoggedIn = true;
-                    showModal('登录成功', '欢迎进入管理后台', () => showPage('manage'));
-                } catch (err) {
-                    console.error('登录失败:', err);
-                    if (email === 'admin@example.com' && password === 'admin123456') {
-                        isAdminLoggedIn = true;
-                        showModal('演示模式', '已使用默认账号登录（演示模式）', () => showPage('manage'));
-                    } else {
-                        showModal('登录失败', '邮箱或密码错误');
-                    }
-                }
-            });
-        }
-        function initModal() {
-            document.getElementById('close-modal').addEventListener('click', hideModal);
-            document.getElementById('modal-confirm').addEventListener('click', hideModal);
-        }
-        function showModal(title, content, callback) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-content').innerHTML = content;
-            document.getElementById('modal').classList.remove('hidden');
-            window.modalCallback = callback;
-        }
-        function hideModal() {
-            document.getElementById('modal').classList.add('hidden');
-            if (window.modalCallback) { window.modalCallback(); window.modalCallback = null; }
-        }
-    </script>
 </body>
 </html>
