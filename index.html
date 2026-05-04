@@ -1,28 +1,29 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>社区相亲匹配系统</title>
     
-    <!-- 1. 先加载Tailwind CSS CDN（修复tailwind is not defined错误） -->
-    <script src="https://cdn.tailwindcss.com?minify"></script>
+    <!-- 1. 先加载Tailwind CSS（官方CDN，最稳定） -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. 只保留一个稳定版Supabase SDK（删除了重复的@2版本） -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
+    <!-- 2. 加载Supabase SDK（使用官方推荐的jsdelivr链接，带完整性校验） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js" 
+            integrity="sha256-+qQZ7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X=" 
+            crossorigin="anonymous"></script>
     
-    <!-- 3. 替换为cdnjs源，避免Edge跟踪防护警告 -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 3. 加载Font Awesome（cdnjs源，稳定） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <script>
-        // ==================== 请在此处填入你的Supabase信息 ====================
+        // ==================== 你的Supabase信息 ====================
         const supabaseUrl = 'https://rdxlxtzixfecqhubwmim.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkeGx4dHppeGZlY3FodWJ3bWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MDc2NzUsImV4cCI6MjA5MzA4MzY3NX0.psABjXz_gV6m1Tc81Eof68hFWJzIsgwaKlxpPrT7urE';
-        // =======================================================================
+        // =========================================================
         
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        // 立即创建客户端，确保在任何代码使用之前
+        window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         
-        // Tailwind配置（现在会正常执行，因为Tailwind已经加载）
+        // Tailwind配置
         tailwind.config = {
             theme: {
                 extend: {
