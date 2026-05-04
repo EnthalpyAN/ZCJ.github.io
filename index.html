@@ -4,18 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>社区相亲匹配系统</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- 1. 先加载Tailwind CSS CDN（修复tailwind is not defined错误） -->
+    <script src="https://cdn.tailwindcss.com?minify"></script>
+    
+    <!-- 2. 只保留一个稳定版Supabase SDK（删除了重复的@2版本） -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2.44.2/dist/umd/supabase.min.js"></script>
+    
+    <!-- 3. 替换为cdnjs源，避免Edge跟踪防护警告 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
     <script>
         // ==================== 请在此处填入你的Supabase信息 ====================
-const supabaseUrl = 'https://rdxlxtzixfecqhubwmim.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkeGx4dHppeGZlY3FodWJ3bWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MDc2NzUsImV4cCI6MjA5MzA4MzY3NX0.psABjXz_gV6m1Tc81Eof68hFWJzIsgwaKlxpPrT7urE';
+        const supabaseUrl = 'https://rdxlxtzixfecqhubwmim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkeGx4dHppeGZlY3FodWJ3bWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MDc2NzUsImV4cCI6MjA5MzA4MzY3NX0.psABjXz_gV6m1Tc81Eof68hFWJzIsgwaKlxpPrT7urE';
         // =======================================================================
         
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
+        
+        // Tailwind配置（现在会正常执行，因为Tailwind已经加载）
         tailwind.config = {
             theme: {
                 extend: {
@@ -66,7 +73,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             <p class="text-gray-medium">正在加载数据...</p>
         </div>
     </div>
-
     <!-- 导航栏 -->
     <nav class="bg-white shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -95,7 +101,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             </div>
         </div>
     </nav>
-
     <!-- 主要内容 -->
     <main class="container mx-auto px-4 py-6">
         <!-- 首页 -->
@@ -140,7 +145,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                     <img src="https://img.freepik.com/free-vector/couple-holding-hands-walking-park_74855-5548.jpg" alt="情侣牵手" class="w-full max-w-md rounded-lg shadow-lg">
                 </div>
             </div>
-
             <div class="mt-16">
                 <h2 class="text-2xl font-bold mb-8 text-center">我们的特色功能</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -168,7 +172,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 </div>
             </div>
         </section>
-
         <!-- 信息登记 -->
         <section id="register" class="page hidden">
             <div class="max-w-3xl mx-auto">
@@ -193,7 +196,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                             <p class="text-xs mt-1 text-center">完成</p>
                         </div>
                     </div>
-
                     <form id="registration-form">
                         <!-- 步骤1 -->
                         <div class="step-content active" data-step="1">
@@ -269,7 +271,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 </div>
             </div>
         </section>
-
         <!-- 智能匹配 -->
         <section id="search" class="page hidden">
             <div class="max-w-5xl mx-auto">
@@ -297,7 +298,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 </div>
             </div>
         </section>
-
         <!-- 管理员登录 -->
         <section id="login" class="page hidden">
             <div class="max-w-md mx-auto">
@@ -311,7 +311,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 </div>
             </div>
         </section>
-
         <!-- 信息管理 -->
         <section id="manage" class="page hidden">
             <div class="max-w-6xl mx-auto">
@@ -339,14 +338,12 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             </div>
         </section>
     </main>
-
     <!-- 页脚 -->
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="container mx-auto px-4 text-center text-sm text-gray-medium">
             <p>© 2025 社区相亲匹配系统 版权所有</p>
         </div>
     </footer>
-
     <!-- 模态框 -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] hidden">
         <div class="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
@@ -360,7 +357,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             </div>
         </div>
     </div>
-
     <script>
         // 全局变量
         let currentStep = 1;
@@ -368,7 +364,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
         const pageSize = 10;
         let filteredUsers = [];
         let isAdminLoggedIn = false;
-
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             initApp();
@@ -381,7 +376,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             initModal();
             initLogin();
         });
-
         async function initApp() {
             try {
                 await loadUserCount();
@@ -392,13 +386,15 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 1000);
             }
         }
-
+        // ✅ 修复了PGRST100错误：使用正确的count语法
         async function loadUserCount() {
-            const { data, error } = await supabaseClient.from('profiles').select('count(*)');
+            const { count, error } = await supabaseClient
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+            
             if (error) throw error;
-            document.getElementById('total-users-count').textContent = data[0].count + '+';
+            document.getElementById('total-users-count').textContent = count + '+';
         }
-
         function initNavigation() {
             document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(link => {
                 link.addEventListener('click', function(e) {
@@ -412,7 +408,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             document.getElementById('mobile-menu-button').addEventListener('click', () => document.getElementById('mobile-menu').classList.toggle('hidden'));
             document.querySelectorAll('.nav-button').forEach(btn => btn.addEventListener('click', () => showPage(btn.getAttribute('data-target'))));
         }
-
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => { p.classList.add('hidden'); p.classList.remove('active'); });
             document.getElementById(pageId).classList.remove('hidden'); document.getElementById(pageId).classList.add('active');
@@ -422,12 +417,10 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             });
             if (pageId === 'manage') loadUserTable();
         }
-
         function initFormSteps() {
             document.querySelectorAll('.next-step').forEach(btn => btn.addEventListener('click', () => { if (validateCurrentStep()) { currentStep++; updateFormSteps(); }}));
             document.querySelectorAll('.prev-step').forEach(btn => btn.addEventListener('click', () => { currentStep--; updateFormSteps(); }));
         }
-
         function validateCurrentStep() {
             const content = document.querySelector(`.step-content[data-step="${currentStep}"]`);
             let valid = true;
@@ -441,7 +434,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             if (!valid) showModal('提示', '请填写所有必填项');
             return valid;
         }
-
         function updateFormSteps() {
             document.querySelectorAll('.step-item').forEach(item => {
                 const step = parseInt(item.getAttribute('data-step'));
@@ -456,7 +448,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 else { content.classList.add('hidden'); content.classList.remove('active'); }
             });
         }
-
         function initPhotoUpload() {
             const box = document.getElementById('upload-box');
             const input = document.getElementById('photo-upload');
@@ -473,12 +464,10 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 }
             });
         }
-
         function initFormSubmit() {
             document.getElementById('registration-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (!validateCurrentStep()) return;
-
                 const formData = {
                     name: document.getElementById('name').value,
                     gender: document.getElementById('gender').value,
@@ -510,7 +499,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                     photo_url: "https://img.freepik.com/free-photo/default-avatar-icon-of-social-media-user_18591-58483.jpg",
                     status: '待匹配'
                 };
-
                 try {
                     const { error } = await supabaseClient.from('profiles').insert([formData]);
                     if (error) throw error;
@@ -528,7 +516,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 }
             });
         }
-
         function initSearch() {
             document.getElementById('search-btn').addEventListener('click', performSearch);
             document.getElementById('reset-filter-btn').addEventListener('click', function() {
@@ -536,13 +523,11 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 document.getElementById('search-results').innerHTML = '<div class="text-center py-8 col-span-full"><i class="fa fa-search text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请设置筛选条件并点击搜索</p></div>';
             });
         }
-
         async function performSearch() {
             const gender = document.getElementById('filter-gender').value;
             const minAge = document.getElementById('filter-min-age').value;
             const maxAge = document.getElementById('filter-max-age').value;
             const liveArea = document.getElementById('filter-liveArea').value.trim();
-
             try {
                 let query = supabaseClient.from('profiles').select('*');
                 if (gender) query = query.eq('gender', gender);
@@ -563,7 +548,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 displaySearchResults();
             }
         }
-
         function displaySearchResults() {
             const container = document.getElementById('search-results');
             if (filteredUsers.length === 0) {
@@ -587,7 +571,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 container.appendChild(card);
             });
         }
-
         window.showUserDetail = function(userId) {
             const user = filteredUsers.find(u => u.id === userId);
             if (!user) return;
@@ -607,14 +590,12 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
             `;
             showModal(`${user.name}的详细信息`, content);
         };
-
         function initManagePage() {
             document.getElementById('manage-search').addEventListener('input', () => { currentPage = 1; loadUserTable(); });
             document.getElementById('manage-status-filter').addEventListener('change', () => { currentPage = 1; loadUserTable(); });
             document.getElementById('export-data-btn').addEventListener('click', exportUserData);
             document.getElementById('logout-btn').addEventListener('click', () => { isAdminLoggedIn = false; showPage('home'); showModal('提示', '已退出登录'); });
         }
-
         async function loadUserTable() {
             const search = document.getElementById('manage-search').value.trim().toLowerCase();
             const status = document.getElementById('manage-status-filter').value;
@@ -659,7 +640,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 document.getElementById('user-table-body').innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center"><i class="fa fa-exclamation-circle text-4xl text-gray-300 mb-2"></i><p class="text-gray-medium">请先登录管理员账号</p></td></tr>';
             }
         }
-
         window.deleteUser = async function(userId) {
             if (confirm('确定要删除该用户吗？')) {
                 try {
@@ -674,7 +654,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 }
             }
         };
-
         async function exportUserData() {
             try {
                 const { data, error } = await supabaseClient.from('profiles').select('*');
@@ -689,13 +668,11 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 showModal('提示', '演示模式：无法导出真实数据');
             }
         }
-
         function initLogin() {
             document.getElementById('login-form').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 const email = document.getElementById('admin-email').value;
                 const password = document.getElementById('admin-password').value;
-
                 try {
                     const { data, error } = await supabaseClient.from('admins').select('*').eq('email', email).eq('password', password).single();
                     if (error || !data) throw new Error('Invalid credentials');
@@ -712,19 +689,16 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
                 }
             });
         }
-
         function initModal() {
             document.getElementById('close-modal').addEventListener('click', hideModal);
             document.getElementById('modal-confirm').addEventListener('click', hideModal);
         }
-
         function showModal(title, content, callback) {
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').innerHTML = content;
             document.getElementById('modal').classList.remove('hidden');
             window.modalCallback = callback;
         }
-
         function hideModal() {
             document.getElementById('modal').classList.add('hidden');
             if (window.modalCallback) { window.modalCallback(); window.modalCallback = null; }
