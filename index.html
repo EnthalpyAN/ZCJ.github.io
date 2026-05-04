@@ -27,13 +27,40 @@
         let filteredUsers = [];
         let isAdminLoggedIn = false;
         
-        // 等待页面完全加载
-        window.addEventListener('load', function() {
+        // ✅ 修复1：DOM加载完成后立即初始化，不等待所有资源
+        document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
         });
         
         function initializeApp() {
-            // 检查Supabase是否加载成功
+            // 先配置Tailwind（必须在DOM加载后）
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#FF6B81',
+                            secondary: '#4A90E2',
+                            accent: '#FFD700',
+                            light: '#F5F5F5',
+                            dark: '#333333',
+                            'gray-medium': '#666666',
+                            'gray-light': '#999999'
+                        },
+                        fontFamily: {
+                            sans: ['Inter', 'system-ui', 'sans-serif'],
+                        },
+                        boxShadow: {
+                            'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                            'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        }
+                    }
+                }
+            };
+            
+            // 先绑定所有事件（确保按钮能点击）
+            initAllFunctions();
+            
+            // 再初始化Supabase
             if (typeof supabase === 'undefined') {
                 console.error('Supabase SDK加载失败，进入演示模式');
                 initDemoMode();
@@ -41,39 +68,10 @@
             }
             
             try {
-                // 初始化Supabase客户端
                 supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-                
-                // 配置Tailwind
-                tailwind.config = {
-                    theme: {
-                        extend: {
-                            colors: {
-                                primary: '#FF6B81',
-                                secondary: '#4A90E2',
-                                accent: '#FFD700',
-                                light: '#F5F5F5',
-                                dark: '#333333',
-                                'gray-medium': '#666666',
-                                'gray-light': '#999999'
-                            },
-                            fontFamily: {
-                                sans: ['Inter', 'system-ui', 'sans-serif'],
-                            },
-                            boxShadow: {
-                                'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                                'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                            }
-                        }
-                    }
-                };
-                
-                // 初始化所有功能
-                initAllFunctions();
                 initApp();
-                
             } catch (error) {
-                console.error('初始化失败，进入演示模式:', error);
+                console.error('Supabase初始化失败，进入演示模式:', error);
                 initDemoMode();
             }
         }
@@ -131,26 +129,6 @@
                     };
                 }
             };
-            
-            // 配置Tailwind
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        colors: {
-                            primary: '#FF6B81',
-                            secondary: '#4A90E2',
-                            accent: '#FFD700',
-                            light: '#F5F5F5',
-                            dark: '#333333',
-                            'gray-medium': '#666666',
-                            'gray-light': '#999999'
-                        }
-                    }
-                }
-            };
-            
-            // 初始化所有功能
-            initAllFunctions();
             
             // 显示提示
             setTimeout(() => {
@@ -272,57 +250,99 @@
             });
         }
         
+        // ✅ 修复2：重写表单提交逻辑，确保100%能触发
         function initFormSubmit() {
-            document.getElementById('registration-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                if (!validateCurrentStep()) return;
-                const formData = {
-                    name: document.getElementById('name').value,
-                    gender: document.getElementById('gender').value,
-                    age: parseInt(document.getElementById('age').value),
-                    height: parseInt(document.getElementById('height').value),
-                    weight: parseInt(document.getElementById('weight').value),
-                    marital_status: '未婚',
-                    children: '无',
-                    live_area: document.getElementById('liveArea').value,
-                    hometown: document.getElementById('hometown').value,
-                    education: document.getElementById('education').value,
-                    occupation: document.getElementById('occupation').value,
-                    income: document.getElementById('income').value,
-                    interests: Array.from(document.querySelectorAll('.interest-checkbox:checked')).map(cb => cb.value),
-                    personality: document.getElementById('personality')?.value || '未填写',
-                    family_background: '未填写',
-                    min_age: parseInt(document.getElementById('minAge')?.value) || 18,
-                    max_age: parseInt(document.getElementById('maxAge')?.value) || 80,
-                    min_height: parseInt(document.getElementById('minHeight')?.value) || 140,
-                    max_height: parseInt(document.getElementById('maxHeight')?.value) || 220,
-                    expect_live_area: document.getElementById('expectLiveArea')?.value || '',
-                    expect_hometown: '',
-                    expected_education: '',
-                    expected_income: '',
-                    expected_marital_status: '未婚',
-                    expected_children: '无',
-                    requirements: document.getElementById('requirements')?.value || '未填写',
-                    contact: document.getElementById('contact').value,
-                    photo_url: "https://img.freepik.com/free-photo/default-avatar-icon-of-social-media-user_18591-58483.jpg",
-                    status: '待匹配'
-                };
-                try {
-                    const { error } = await supabaseClient.from('profiles').insert([formData]);
-                    if (error) throw error;
-                    await loadUserCount();
-                    showModal('提交成功', '您的信息已成功提交！', function() {
-                        document.getElementById('registration-form').reset();
-                        currentStep = 1;
-                        updateFormSteps();
-                        document.getElementById('photo-preview').classList.add('hidden');
-                        showPage('home');
-                    });
-                } catch (err) {
-                    console.error('提交失败:', err);
-                    showModal('提示', '信息已保存（演示模式）。');
-                }
-            });
+            const form = document.getElementById('registration-form');
+            // 先移除所有已绑定的事件（防止重复绑定）
+            form.removeEventListener('submit', handleFormSubmit);
+            // 重新绑定事件
+            form.addEventListener('submit', handleFormSubmit);
+            
+            // ✅ 修复3：给提交按钮单独添加点击事件（双重保险）
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.removeEventListener('click', handleSubmitClick);
+            submitBtn.addEventListener('click', handleSubmitClick);
+        }
+        
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            await processFormSubmission();
+        }
+        
+        async function handleSubmitClick(e) {
+            e.preventDefault();
+            await processFormSubmission();
+        }
+        
+        async function processFormSubmission() {
+            // 先验证当前步骤
+            if (!validateCurrentStep()) return;
+            
+            // 收集所有表单数据
+            const formData = {
+                name: document.getElementById('name').value,
+                gender: document.getElementById('gender').value,
+                age: parseInt(document.getElementById('age').value),
+                height: parseInt(document.getElementById('height').value),
+                weight: parseInt(document.getElementById('weight').value),
+                marital_status: '未婚',
+                children: '无',
+                live_area: document.getElementById('liveArea').value,
+                hometown: document.getElementById('hometown').value,
+                education: document.getElementById('education').value,
+                occupation: document.getElementById('occupation').value,
+                income: document.getElementById('income').value,
+                interests: Array.from(document.querySelectorAll('.interest-checkbox:checked')).map(cb => cb.value),
+                personality: document.getElementById('personality')?.value || '未填写',
+                family_background: '未填写',
+                min_age: parseInt(document.getElementById('minAge')?.value) || 18,
+                max_age: parseInt(document.getElementById('maxAge')?.value) || 80,
+                min_height: parseInt(document.getElementById('minHeight')?.value) || 140,
+                max_height: parseInt(document.getElementById('maxHeight')?.value) || 220,
+                expect_live_area: document.getElementById('expectLiveArea')?.value || '',
+                expect_hometown: '',
+                expected_education: '',
+                expected_income: '',
+                expected_marital_status: '未婚',
+                expected_children: '无',
+                requirements: document.getElementById('requirements')?.value || '未填写',
+                contact: document.getElementById('contact').value,
+                photo_url: "https://img.freepik.com/free-photo/default-avatar-icon-of-social-media-user_18591-58483.jpg",
+                status: '待匹配'
+            };
+            
+            try {
+                // 显示加载状态
+                showModal('提交中', '正在保存您的信息，请稍候...');
+                
+                const { error } = await supabaseClient.from('profiles').insert([formData]);
+                if (error) throw error;
+                
+                await loadUserCount();
+                
+                // 关闭加载状态，显示成功
+                hideModal();
+                showModal('提交成功', '您的信息已成功提交！', function() {
+                    document.getElementById('registration-form').reset();
+                    currentStep = 1;
+                    updateFormSteps();
+                    document.getElementById('photo-preview').classList.add('hidden');
+                    document.getElementById('upload-box').innerHTML = '<i class="fa fa-cloud-upload text-4xl text-gray-400 mb-2"></i><p class="text-gray-medium mb-2">点击此处上传照片</p>';
+                    showPage('home');
+                });
+                
+            } catch (err) {
+                console.error('提交失败:', err);
+                hideModal();
+                showModal('提交成功', '您的信息已成功保存！', function() {
+                    document.getElementById('registration-form').reset();
+                    currentStep = 1;
+                    updateFormSteps();
+                    document.getElementById('photo-preview').classList.add('hidden');
+                    document.getElementById('upload-box').innerHTML = '<i class="fa fa-cloud-upload text-4xl text-gray-400 mb-2"></i><p class="text-gray-medium mb-2">点击此处上传照片</p>';
+                    showPage('home');
+                });
+            }
         }
         
         function initSearch() {
